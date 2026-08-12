@@ -1,19 +1,20 @@
-FROM node:22-bookworm-slim
+FROM node:20-alpine
+
+# 1. Instalar OpenSSL necesario para Prisma en Alpine
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y openssl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY package*.json ./
-
+COPY prisma ./prisma/
 
 RUN npm install
 
 COPY . .
 
+# 2. Generar el cliente de Prisma con las librerías del entorno
 RUN npx prisma generate
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+CMD ["npx", "tsx", "src/server.ts"]

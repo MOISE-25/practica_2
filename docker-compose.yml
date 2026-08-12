@@ -1,14 +1,16 @@
+version: '3.8'
+
 services:
   db:
-    image: postgres:17
-    container_name: practica_postgres
-    restart: unless-stopped
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: practica_db
+      POSTGRES_DB: maestria_db
     ports:
-      - "5434:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -16,29 +18,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: practica_backend
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://postgres:admin123@db:5432/practica_db?schema=public
-      PORT: 3000
-      HOST: 0.0.0.0
+    container_name: fastify_backend
+    restart: always
     ports:
-      - "3001:3000"
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "postgresql://user_admin:secretpassword@db:5432/maestria_db?schema=public"
+      PORT: 3001
+      NODE_ENV: production
     depends_on:
       - db
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: practica_frontend
-    restart: unless-stopped
-    environment:
-      VITE_API_URL: http://localhost:3001
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:
