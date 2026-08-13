@@ -17,4 +17,5 @@ RUN npx prisma generate
 
 EXPOSE 3001
 
-CMD ["npx", "tsx", "src/server.ts"]
+# 3. Al iniciar el contenedor, sincroniza el esquema con la BD y luego arranca el server
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx src/server.ts"]

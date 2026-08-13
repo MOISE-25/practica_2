@@ -1,16 +1,26 @@
-FROM node:22-bookworm-slim
+# Etapa 1: Compilación de la app con Node.js
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y openssl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
+# Copiar paquetes e instalar dependencias
 COPY package*.json ./
-
 RUN npm ci
 
+# Copiar código fuente y compilar (genera la carpeta dist/)
 COPY . .
+RUN npm run build
 
-EXPOSE 3000
+# Etapa 2: Servidor web ultra ligero con Nginx
+FROM nginx:alpine
 
-CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+# Copiar los archivos estáticos generados por Vite hacia Nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copiar configuración personalizada con proxy hacia el backend
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Exponer el puerto estándar de Nginx
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

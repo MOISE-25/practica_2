@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # 1. Base de datos PostgreSQL
   db:
     image: postgres:15-alpine
     container_name: postgres_db
@@ -14,20 +15,25 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # 2. API Backend
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: fastify_backend
-    restart: always
+    build: ./backend
+    container_name: backend_container
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: "postgresql://postgrest:admin123@db:5432/maestria_db?schema=public"
-      PORT: 3001
-      NODE_ENV: production
+      DATABASE_URL: "postgresql://postgres:admin123@db:5432/maestria_db?schema=public"
     depends_on:
       - db
+
+  # 3. Interfaz Web Frontend
+  frontend:
+    build: ./frontend
+    container_name: frontend_container
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
