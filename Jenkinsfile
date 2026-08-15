@@ -9,7 +9,7 @@ pipeline {
         stage('Identificacion') {
             steps {
                 sh 'git rev-parse --short HEAD'
-                sh 'git status -short'
+                sh 'git status --short'
             }
         }
     }
