@@ -13,8 +13,8 @@ pipeline {
     }
 
     environment {
-        LOCAL_BACKEND_IMAGE  = 'proyecto-integrador-u3-backend'
-        LOCAL_FRONTEND_IMAGE = 'proyecto-integrador-u3-frontend'
+        LOCAL_BACKEND_IMAGE  = 'proyecto-3-backend'
+        LOCAL_FRONTEND_IMAGE = 'proyecto-3-frontend'
 
         REMOTE_BACKEND_IMAGE  = 'proyecto-integrador-backend'
         REMOTE_FRONTEND_IMAGE = 'proyecto-integrador-frontend'
@@ -24,7 +24,7 @@ pipeline {
         RAILWAY_BACKEND_SERVICE_ID = '5c52cc15-b575-488a-969e-c35bacee17c0'
         RAILWAY_FRONTEND_SERVICE_ID = '4c049b51-26d5-4b82-bf0b-2534c80c888c'
     }
-
+    
     stages {
 
         stage('Checkout') {
