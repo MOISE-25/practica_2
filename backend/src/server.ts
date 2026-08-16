@@ -13,9 +13,15 @@ app.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 });
 
-// Endpoint de prueba /health (Paso 1)
-app.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date() };
+// Endpoint de prueba /health
+app.get('/health', async () => {
+  return {
+    status: 'ok',
+    message: "Servidor backend Fastify activo",
+    version: process.env.APP_VERSION ?? 'v1',
+    service: 'backend',
+    timestamp: new Date()
+  };
 });
 
 // Registrar Rutas

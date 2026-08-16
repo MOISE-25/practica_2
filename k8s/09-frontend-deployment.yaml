@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: practica-frontend
+  namespace: devops-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: practica-frontend
+  template:
+    metadata:
+      labels:
+        app: practica-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: practica-frontend:v2 
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
