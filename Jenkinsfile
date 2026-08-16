@@ -19,6 +19,11 @@ pipeline {
         REMOTE_BACKEND_IMAGE  = 'practica_2_maestria-backend'
         REMOTE_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
 
+        // IDs de Railway (no son secretos, se obtienen del dashboard del proyecto)
+        // Reemplaza estos valores por los reales de tu proyecto en Railway.
+        RAILWAY_ENVIRONMENT_ID      = 'REEMPLAZAR_CON_ENVIRONMENT_ID'
+        RAILWAY_BACKEND_SERVICE_ID  = 'REEMPLAZAR_CON_BACKEND_SERVICE_ID'
+        RAILWAY_FRONTEND_SERVICE_ID = 'REEMPLAZAR_CON_FRONTEND_SERVICE_ID'
     }
 
     stages {
