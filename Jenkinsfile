@@ -159,7 +159,13 @@ pipeline {
                     echo "DESPLIEGUE LOCAL CON DOCKER COMPOSE"
                     echo "========================================"
 
+                    # Forzar la eliminación de contenedores huérfanos o con nombres duplicados
+                    docker rm -f postgres_db backend_container frontend_container || true
+
+                    # Detener el stack de compose actual
                     docker compose down --remove-orphans || true
+
+                    # Desplegar los servicios actualizados
                     docker compose up -d
 
                     echo "Contenedores desplegados localmente."
