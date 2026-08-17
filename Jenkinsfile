@@ -18,12 +18,6 @@ pipeline {
 
         REMOTE_BACKEND_IMAGE  = 'practica_2_maestria-backend'
         REMOTE_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
-
-        // IDs de Railway (no son secretos, se obtienen del dashboard del proyecto)
-        // Reemplaza estos valores por los reales de tu proyecto en Railway.
-        RAILWAY_ENVIRONMENT_ID      = 'REEMPLAZAR_CON_ENVIRONMENT_ID'
-        RAILWAY_BACKEND_SERVICE_ID  = 'REEMPLAZAR_CON_BACKEND_SERVICE_ID'
-        RAILWAY_FRONTEND_SERVICE_ID = 'REEMPLAZAR_CON_FRONTEND_SERVICE_ID'
     }
 
     stages {
@@ -128,7 +122,7 @@ pipeline {
                         export DOCKER_CONFIG="$(mktemp -d)"
                         trap 'rm -rf "$DOCKER_CONFIG"' EXIT
 
-                        echo "$DOCKER_PASS" | docker login                             -u "$DOCKER_USER"                             --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
                         BACKEND_LATEST="${DOCKER_USER}/${REMOTE_BACKEND_IMAGE}:latest"
                         BACKEND_BUILD="${DOCKER_USER}/${REMOTE_BACKEND_IMAGE}:${BUILD_NUMBER}"
@@ -156,59 +150,20 @@ pipeline {
             }
         }
 
-        stage('Railway - CLI Check') {
+        stage('Local - Deploy Containers') {
             steps {
                 sh '''
                     set -eu
-                    echo "Verificando Railway CLI..."
-                    npx -y @railway/cli --version
+
+                    echo "========================================"
+                    echo "DESPLIEGUE LOCAL CON DOCKER COMPOSE"
+                    echo "========================================"
+
+                    docker compose down --remove-orphans || true
+                    docker compose up -d
+
+                    echo "Contenedores desplegados localmente."
                 '''
-            }
-        }
-
-        stage('Railway - Redeploy Backend') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'railway-token',
-                        variable: 'RAILWAY_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        set -eu
-
-                        echo "========================================"
-                        echo "REDEPLOY BACKEND EN RAILWAY"
-                        echo "========================================"
-
-                        npx -y @railway/cli redeploy                             --service "$RAILWAY_BACKEND_SERVICE_ID"                             --environment "$RAILWAY_ENVIRONMENT_ID"                             --yes
-
-                        echo "Redeploy del backend solicitado correctamente."
-                    '''
-                }
-            }
-        }
-
-        stage('Railway - Redeploy Frontend') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'railway-token',
-                        variable: 'RAILWAY_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        set -eu
-
-                        echo "========================================"
-                        echo "REDEPLOY FRONTEND EN RAILWAY"
-                        echo "========================================"
-
-                        npx -y @railway/cli redeploy                             --service "$RAILWAY_FRONTEND_SERVICE_ID"                             --environment "$RAILWAY_ENVIRONMENT_ID"                             --yes
-
-                        echo "Redeploy del frontend solicitado correctamente."
-                    '''
-                }
             }
         }
     }
@@ -222,8 +177,7 @@ pipeline {
             echo 'Frontend validado y construido'
             echo 'Imágenes Docker construidas'
             echo 'Imágenes publicadas en Docker Hub'
-            echo 'Redeploy solicitado para Backend en Railway'
-            echo 'Redeploy solicitado para Frontend en Railway'
+            echo 'Servicios desplegados localmente con Docker Compose'
         }
 
         failure {
