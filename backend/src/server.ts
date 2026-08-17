@@ -24,6 +24,14 @@ app.get('/health', async () => {
   };
 });
 
+// Endpoint raíz (para health-check de Railway y para probar en el navegador)
+app.get('/', async () => {
+  return {
+    status: 'OK',
+    message: 'Servidor Backend Fastify activo'
+  };
+});
+
 // Registrar Rutas
 app.register(userRoutes);
 
