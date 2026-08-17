@@ -18,6 +18,7 @@ services:
   # 2. API Backend
   backend:
     build: ./backend
+    image: moisej25/practica_2_maestria-backend:latest
     container_name: backend_container
     ports:
       - "3001:3001"
@@ -29,6 +30,7 @@ services:
   # 3. Interfaz Web Frontend
   frontend:
     build: ./frontend
+    image: moisej25/practica_2_maestria-frontend:latest
     container_name: frontend_container
     ports:
       - "3000:80"
