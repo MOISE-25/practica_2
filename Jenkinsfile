@@ -13,8 +13,9 @@ pipeline {
     }
 
     environment {
-        LOCAL_BACKEND_IMAGE  = 'practica_2_maestria-backend'
-        LOCAL_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
+        // Coincide con las imágenes definidas en el docker-compose.yml
+        LOCAL_BACKEND_IMAGE  = 'moisej25/practica_2_maestria-backend'
+        LOCAL_FRONTEND_IMAGE = 'moisej25/practica_2_maestria-frontend'
 
         REMOTE_BACKEND_IMAGE  = 'practica_2_maestria-backend'
         REMOTE_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
@@ -130,12 +131,11 @@ pipeline {
                         FRONTEND_LATEST="${DOCKER_USER}/${REMOTE_FRONTEND_IMAGE}:latest"
                         FRONTEND_BUILD="${DOCKER_USER}/${REMOTE_FRONTEND_IMAGE}:${BUILD_NUMBER}"
 
-                        docker tag "${LOCAL_BACKEND_IMAGE}:latest" "$BACKEND_LATEST"
+                        # Generar etiquetas con el número de build
                         docker tag "${LOCAL_BACKEND_IMAGE}:latest" "$BACKEND_BUILD"
-
-                        docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_LATEST"
                         docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_BUILD"
 
+                        # Publicar todas las versiones en Docker Hub
                         docker push "$BACKEND_LATEST"
                         docker push "$BACKEND_BUILD"
 
