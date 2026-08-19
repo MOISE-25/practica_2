@@ -12,20 +12,91 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    triggers {
+        githubPush()
+    }
+
     environment {
-        // Coincide con las imágenes definidas en el docker-compose.yml
-        LOCAL_BACKEND_IMAGE  = 'moisej25/practica_2_maestria-backend'
-        LOCAL_FRONTEND_IMAGE = 'moisej25/practica_2_maestria-frontend'
+        LOCAL_BACKEND_IMAGE  = 'practica_2_maestria-backend'
+        LOCAL_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
 
         REMOTE_BACKEND_IMAGE  = 'practica_2_maestria-backend'
         REMOTE_FRONTEND_IMAGE = 'practica_2_maestria-frontend'
+
+        RAILWAY_PROJECT_ID = '51adb53f-cbc2-4afd-aee4-a7b50fc8ec93'
+        RAILWAY_ENVIRONMENT_ID = 'a21020de-8d02-4cfe-b3b0-1d0ac38617f1'
+        RAILWAY_BACKEND_SERVICE_ID = '0afb928e-0ca6-4790-8985-d387b79141d1'
+        RAILWAY_FRONTEND_SERVICE_ID = 'e9daf178-664d-424f-8484-2849949e0dc7'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    def scmVars = checkout scm
+
+                    env.SCM_GIT_BRANCH = scmVars.GIT_BRANCH ?: ''
+                    env.SCM_GIT_COMMIT = scmVars.GIT_COMMIT ?: ''
+
+                    echo "SCM branch: ${env.SCM_GIT_BRANCH}"
+                    echo "SCM commit: ${env.SCM_GIT_COMMIT}"
+                }
+            }
+        }
+
+        stage('Metadata') {
+            steps {
+                script {
+                    env.GIT_FULL = env.SCM_GIT_COMMIT ?: sh(
+                        script: 'git rev-parse HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.GIT_SHORT = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.ORIGIN_MAIN_COMMIT = sh(
+                        script: 'git rev-parse origin/main',
+                        returnStdout: true
+                    ).trim()
+
+                    env.IS_MAIN = (
+                        env.GIT_FULL == env.ORIGIN_MAIN_COMMIT
+                    ) ? 'true' : 'false'
+
+                    currentBuild.description = "commit ${env.GIT_SHORT} | main=${env.IS_MAIN}"
+
+                    echo "========================================"
+                    echo "METADATOS DEL BUILD"
+                    echo "========================================"
+                    echo "Job: ${env.JOB_NAME}"
+                    echo "Build: ${env.BUILD_NUMBER}"
+                    echo "Rama SCM: ${env.SCM_GIT_BRANCH}"
+                    echo "Commit corto: ${env.GIT_SHORT}"
+                    echo "Commit completo: ${env.GIT_FULL}"
+                    echo "Commit origin/main: ${env.ORIGIN_MAIN_COMMIT}"
+                    echo "Es main: ${env.IS_MAIN}"
+                }
+
+                sh '''
+                    set -eu
+
+                    mkdir -p reports
+
+                    cat > reports/build-metadata.txt <<EOF
+JOB_NAME=${JOB_NAME}
+BUILD_NUMBER=${BUILD_NUMBER}
+BUILD_URL=${BUILD_URL}
+SCM_GIT_BRANCH=${SCM_GIT_BRANCH:-unknown}
+GIT_SHORT=${GIT_SHORT}
+GIT_FULL=${GIT_FULL}
+ORIGIN_MAIN_COMMIT=${ORIGIN_MAIN_COMMIT}
+IS_MAIN=${IS_MAIN}
+EOF
+                '''
             }
         }
 
@@ -104,7 +175,29 @@ pipeline {
             }
         }
 
+        stage('Evidence - Image Metadata') {
+            steps {
+                sh '''
+                    set -eu
+
+                    mkdir -p reports
+
+                    docker image inspect "${LOCAL_BACKEND_IMAGE}:latest" > reports/backend-image-inspect.json
+                    docker image inspect "${LOCAL_FRONTEND_IMAGE}:latest" > reports/frontend-image-inspect.json
+                    docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}' > reports/docker-images.txt
+
+                    echo "Metadatos de imágenes guardados en reports/."
+                '''
+            }
+        }
+
         stage('Docker - Publish') {
+            when {
+                expression {
+                    return env.IS_MAIN == 'true'
+                }
+            }
+
             steps {
                 withCredentials([
                     usernamePassword(
@@ -127,63 +220,143 @@ pipeline {
 
                         BACKEND_LATEST="${DOCKER_USER}/${REMOTE_BACKEND_IMAGE}:latest"
                         BACKEND_BUILD="${DOCKER_USER}/${REMOTE_BACKEND_IMAGE}:${BUILD_NUMBER}"
+                        BACKEND_TRACE="${DOCKER_USER}/${REMOTE_BACKEND_IMAGE}:${BUILD_NUMBER}-${GIT_SHORT}"
 
                         FRONTEND_LATEST="${DOCKER_USER}/${REMOTE_FRONTEND_IMAGE}:latest"
                         FRONTEND_BUILD="${DOCKER_USER}/${REMOTE_FRONTEND_IMAGE}:${BUILD_NUMBER}"
+                        FRONTEND_TRACE="${DOCKER_USER}/${REMOTE_FRONTEND_IMAGE}:${BUILD_NUMBER}-${GIT_SHORT}"
 
-                        # Generar etiquetas con el número de build
+                        docker tag "${LOCAL_BACKEND_IMAGE}:latest" "$BACKEND_LATEST"
                         docker tag "${LOCAL_BACKEND_IMAGE}:latest" "$BACKEND_BUILD"
-                        docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_BUILD"
+                        docker tag "${LOCAL_BACKEND_IMAGE}:latest" "$BACKEND_TRACE"
 
-                        # Publicar todas las versiones en Docker Hub
+                        docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_LATEST"
+                        docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_BUILD"
+                        docker tag "${LOCAL_FRONTEND_IMAGE}:latest" "$FRONTEND_TRACE"
+
                         docker push "$BACKEND_LATEST"
                         docker push "$BACKEND_BUILD"
+                        docker push "$BACKEND_TRACE"
 
                         docker push "$FRONTEND_LATEST"
                         docker push "$FRONTEND_BUILD"
+                        docker push "$FRONTEND_TRACE"
 
-                        docker logout
+                        cat > reports/docker-publish-metadata.txt <<EOF
+                        BACKEND_LATEST=${BACKEND_LATEST}
+                        BACKEND_BUILD=${BACKEND_BUILD}
+                        BACKEND_TRACE=${BACKEND_TRACE}
+                        FRONTEND_LATEST=${FRONTEND_LATEST}
+                        FRONTEND_BUILD=${FRONTEND_BUILD}
+                        FRONTEND_TRACE=${FRONTEND_TRACE}
+                        EOF
+
+                        docker logout >/dev/null 2>&1 || true
 
                         echo "Imágenes publicadas correctamente en Docker Hub."
+                        echo "Backend trazable: $BACKEND_TRACE"
+                        echo "Frontend trazable: $FRONTEND_TRACE"
                     '''
                 }
             }
         }
 
-        stage('Local - Deploy Containers') {
+        stage('Railway - CLI Check') {
+            when {
+                expression {
+                    return env.IS_MAIN == 'true'
+                }
+            }
+
             steps {
                 sh '''
                     set -eu
-
-                    echo "========================================"
-                    echo "DESPLIEGUE LOCAL CON DOCKER COMPOSE"
-                    echo "========================================"
-
-                    # Forzar la eliminación de contenedores huérfanos o con nombres duplicados
-                    docker rm -f postgres_db backend_container frontend_container || true
-
-                    # Detener el stack de compose actual
-                    docker compose down --remove-orphans || true
-
-                    # Desplegar los servicios actualizados
-                    docker compose up -d
-
-                    echo "Contenedores desplegados localmente."
+                    echo "Verificando Railway CLI..."
+                    npx -y @railway/cli --version
                 '''
+            }
+        }
+
+        stage('Railway - Redeploy Backend') {
+            when {
+                expression {
+                    return env.IS_MAIN == 'true'
+                }
+            }
+
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'railway-token',
+                        variable: 'RAILWAY_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+
+                        echo "========================================"
+                        echo "REDEPLOY BACKEND EN RAILWAY"
+                        echo "========================================"
+
+                        npx -y @railway/cli redeploy --service "$RAILWAY_BACKEND_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --yes --json > reports/railway-backend-redeploy.json
+
+                        cat reports/railway-backend-redeploy.json
+
+                        echo "Redeploy del backend solicitado correctamente."
+                    '''
+                }
+            }
+        }
+
+        stage('Railway - Redeploy Frontend') {
+            when {
+                expression {
+                    return env.IS_MAIN == 'true'
+                }
+            }
+
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'railway-token',
+                        variable: 'RAILWAY_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+
+                        echo "========================================"
+                        echo "REDEPLOY FRONTEND EN RAILWAY"
+                        echo "========================================"
+
+                        npx -y @railway/cli redeploy --service "$RAILWAY_FRONTEND_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --yes --json > reports/railway-frontend-redeploy.json
+
+                        cat reports/railway-frontend-redeploy.json
+
+                        echo "Redeploy del frontend solicitado correctamente."
+                    '''
+                }
             }
         }
     }
 
     post {
+
         success {
             echo '========================================'
             echo 'PIPELINE SATISFACTORIO'
             echo '========================================'
-            echo 'Backend probado correctamente'
-            echo 'Frontend validado y construido'
-            echo 'Imágenes Docker construidas'
-            echo 'Imágenes publicadas en Docker Hub'
-            echo 'Servicios desplegados localmente con Docker Compose'
+            echo "Build: ${env.BUILD_NUMBER}"
+            echo "Commit: ${env.GIT_SHORT ?: 'N/A'}"
+            echo "Main: ${env.IS_MAIN ?: 'N/A'}"
+
+            script {
+                if (env.IS_MAIN == 'true') {
+                    echo 'Imágenes publicadas en Docker Hub y redeploy solicitado en Railway.'
+                } else {
+                    echo 'Build de rama no-main: pruebas y construcción ejecutadas; publicación y despliegue omitidos.'
+                }
+            }
         }
 
         failure {
@@ -195,6 +368,12 @@ pipeline {
 
         always {
             sh 'docker logout >/dev/null 2>&1 || true'
+
+            archiveArtifacts(
+                artifacts: 'reports/**',
+                allowEmptyArchive: true,
+                fingerprint: true
+            )
         }
     }
 }
