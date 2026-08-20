@@ -15,3 +15,4 @@ Para levantar los servicios de la aplicación y la base de datos localmente:
 
 ```bash
 docker-compose up -d --build
+semana 3
