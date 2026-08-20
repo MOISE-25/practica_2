@@ -12,7 +12,7 @@ RUN npm run build
 # Etapa 2: Servidor web ultra ligero con Nginx
 FROM nginx:alpine
 
-# Copiar los archivos estáticos generados por Vite
+# Copiar los archivos estáticos generados por Vites
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Eliminar archivo de configuración por defecto de Nginx
