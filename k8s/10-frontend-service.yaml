@@ -4,10 +4,10 @@ metadata:
   name: practica-frontend
   namespace: devops-lab
 spec:
-  type: ClusterIP
   selector:
     app: practica-frontend
   ports:
-    - name: http
-      port: 5374        
-      targetPort: 80     
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

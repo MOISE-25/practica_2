@@ -4,7 +4,12 @@ metadata:
   name: practica-frontend
   namespace: devops-lab
 spec:
-  replicas: 1
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: practica-frontend
@@ -15,24 +20,18 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: practica-frontend:v2 
-          imagePullPolicy: IfNotPresent
+          image: moisej25/practica_2_maestria-frontend:latest
           ports:
             - containerPort: 80
-          envFrom:
-            - configMapRef:
-                name: frontend-config
           readinessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 5
             periodSeconds: 5
-            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
-            failureThreshold: 3

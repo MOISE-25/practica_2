@@ -21,6 +21,9 @@ interface User {
   role?: string;
 }
 
+const BASE_URL = ((import.meta as any).env?.VITE_API_URL as string) || '';
+const API_URL = `${BASE_URL.replace(/\/$/, '')}/api/users`;
+
 export const UserCrud: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [name, setName] = useState('');
@@ -32,7 +35,7 @@ export const UserCrud: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/users');
+      const response = await fetch(API_URL);
       const data: User[] = await response.json();
       setUsers(data);
     } catch (err) {
@@ -53,7 +56,7 @@ export const UserCrud: React.FC = () => {
 
     const loadUsers = async () => {
       try {
-        const response = await fetch('/api/users');
+        const response = await fetch(API_URL);
         const data: User[] = await response.json();
         if (isMounted) {
           setUsers(data);
@@ -81,7 +84,7 @@ export const UserCrud: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, role }),
@@ -116,7 +119,7 @@ export const UserCrud: React.FC = () => {
 
   const handleDeleteUser = async (id: number) => {
     try {
-      const response = await fetch(`/api/users/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
       });
 
