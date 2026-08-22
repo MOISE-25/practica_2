@@ -83,11 +83,10 @@ jobs:
             backend=${{ vars.DOCKERHUB_USERNAME }}/practica_2_maestria-backend:${{ github.sha }} \
             -n devops-lab
 
-      - name: Esperar PostgreSQL
+      - name: Reiniciar y Esperar PostgreSQL
         run: |
-          kubectl rollout status deployment/postgres \
-            -n devops-lab \
-            --timeout=120s
+          kubectl rollout restart deployment/postgres -n devops-lab
+          kubectl rollout status deployment/postgres -n devops-lab --timeout=120s
 
       - name: Eliminar Job Prisma anterior
         run: |
